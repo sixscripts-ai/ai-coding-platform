@@ -44,7 +44,8 @@ import re
 from typing import Dict, List, Tuple, Optional, Any, Union, Callable
 from pathlib import Path
 from collections import defaultdict, Counter
-from flask import Flask, request, jsonify, render_template, send_from_directory, Response, abort, Markup
+from flask import Flask, request, jsonify, render_template, send_from_directory, Response, abort
+from markupsafe import Markup
 import asyncio
 
 # Import Gemini AI integration
@@ -197,6 +198,19 @@ class FileManager:
         except Exception as e:
             logger.error(f"Error deleting file {filename}: {e}")
             raise
+
+    def list_files(self, pattern: str = "*") -> List[str]:
+        """Return a list of file paths matching a glob pattern relative to the workspace."""
+        try:
+            files = [
+                str(p.relative_to(self.base_dir))
+                for p in self.base_dir.rglob(pattern)
+                if p.is_file()
+            ]
+            return files
+        except Exception as e:
+            logger.error(f"Error listing files with pattern {pattern}: {e}")
+            return []
 
 # ---------------------------------------------------------------------------------
 # Version Control Module
@@ -2519,6 +2533,8 @@ class AISuperAgent(threading.Thread):
         self.daemon = True  # Thread will terminate when main program exits
         self.lock = threading.Lock()
         self.last_execution_times = {}
+        # Alias used in tests for compatibility
+        self.last_run_times = self.last_execution_times
         self.task_history = []
         self.learning_data = []
         self.api_key = api_key  # Store API key securely for AI service access
@@ -2628,6 +2644,44 @@ class AISuperAgent(threading.Thread):
             except Exception as e:
                 logger.error(f"Error processing task: {e}")
                 self.error_counts['task_processing'] += 1
+
+    def _execute_task(self, task: dict) -> bool:
+        """Execute a single task and update performance metrics."""
+        task_name = task.get('name')
+        handler = self.task_handlers.get(task_name)
+        if handler is not None:
+            handler = getattr(self, handler.__name__, handler)
+        else:
+            handler = getattr(self, f"_handle_{task_name}", None)
+        if not handler or not callable(handler):
+            logger.warning(f"No handler found for task: {task_name}")
+            return False
+
+        start = time.time()
+        result = handler(task)
+        exec_time = time.time() - start
+
+        self.last_execution_times[task_name] = time.time()
+        metrics = self.performance_metrics.setdefault(
+            task_name, {"execution_count": 0, "success_rate": 0.0}
+        )
+        metrics["execution_count"] += 1
+        success_total = metrics["success_rate"] * (metrics["execution_count"] - 1)
+        metrics["success_rate"] = (success_total + int(bool(result))) / metrics[
+            "execution_count"
+        ]
+        self.completed_tasks.append(
+            {
+                "name": task_name,
+                "timestamp": time.time(),
+                "execution_time": exec_time,
+                "result": result,
+            }
+        )
+        if len(self.completed_tasks) > 100:
+            self.completed_tasks.pop(0)
+        logger.debug(f"Task {task_name} executed in {exec_time:.2f}s")
+        return bool(result)
     
     def _dynamic_task_scheduling(self):
         """Dynamically adjust task priorities based on system state and metrics"""
@@ -2714,6 +2768,7 @@ class AISuperAgent(threading.Thread):
             'interval': interval,
             'params': params or {},
             'added_time': time.time(),
+            'scheduled_time': time.time(),
             'recurring': recurring
         }
         
@@ -3282,6 +3337,14 @@ class UserProfile:
 app = Flask(__name__)
 integrated_ui = IntegratedUI(app)
 
+# Expose core component instances for external modules and testing
+file_manager = FileManager()
+version_control = VersionControl()
+ai_debugger = AIDebugger()
+ai_test_runner = AITestRunner()
+code_optimizer = CodeOptimizer()
+language_support = LanguageSupport()
+
 # Global objects for user profiles
 user_profiles = {}
 
@@ -3412,20 +3475,11 @@ def main(port=5000):
     ai_super_agent.stop()
 
 if __name__ == '__main__':
-    # Parse command line arguments
     import argparse
     parser = argparse.ArgumentParser(description='Run the AI Coding Development Platform')
     parser.add_argument('--port', type=int, default=5000, help='Port to run the server on (default: 5000)')
     args = parser.parse_args()
-    
-    # Initialize core components
-    file_manager = FileManager()
-    version_control = VersionControl()
-    ai_debugger = AIDebugger()
-    ai_test_runner = AITestRunner()
-    code_optimizer = CodeOptimizer()
-    language_support = LanguageSupport()
-    
+
     main(port=args.port)
 
 # ---------------------------------------------------------------------------------
