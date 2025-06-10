@@ -6,7 +6,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from flask import Markup
+from markupsafe import Markup
 import random
 
 # Set up logging

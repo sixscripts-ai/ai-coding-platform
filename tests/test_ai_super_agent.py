@@ -17,7 +17,10 @@ import json
 from unittest.mock import MagicMock, patch
 from pathlib import Path
 from queue import Queue
-from threading import Lock
+try:
+    from _thread import LockType as Lock
+except ImportError:  # Fallback for older Python versions
+    from threading import Lock
 from collections import defaultdict
 
 # Add parent directory to path for imports
@@ -67,10 +70,10 @@ class TestAISuperAgent(unittest.TestCase):
         self.mock_code_optimizer.optimize.return_value = ("def test_function():\n    return True\n", ["No optimizations needed"])
         
         # Create test instance
-        with patch('eden_platform.file_manager', self.mock_file_manager), \
-             patch('eden_platform.ai_debugger', self.mock_ai_debugger), \
-             patch('eden_platform.ai_test_runner', self.mock_ai_test_runner), \
-             patch('eden_platform.code_optimizer', self.mock_code_optimizer):
+        with patch('eden_platform_main.file_manager', self.mock_file_manager), \
+             patch('eden_platform_main.ai_debugger', self.mock_ai_debugger), \
+             patch('eden_platform_main.ai_test_runner', self.mock_ai_test_runner), \
+             patch('eden_platform_main.code_optimizer', self.mock_code_optimizer):
             self.agent = AISuperAgent(interval=1, api_key="test_key")
             # Don't actually start the thread
             self.agent.running = True
@@ -165,7 +168,7 @@ class TestAISuperAgent(unittest.TestCase):
         }
         
         # Ensure the mocked test runner is accessible
-        with patch('eden_platform.ai_test_runner', self.mock_ai_test_runner):
+        with patch('eden_platform_main.ai_test_runner', self.mock_ai_test_runner):
             # Execute the handler
             result = self.agent._handle_testing(task)
             
@@ -186,8 +189,8 @@ class TestAISuperAgent(unittest.TestCase):
         }
         
         # Ensure the mocked dependencies are accessible
-        with patch('eden_platform.file_manager', self.mock_file_manager), \
-             patch('eden_platform.code_optimizer', self.mock_code_optimizer):
+        with patch('eden_platform_main.file_manager', self.mock_file_manager), \
+             patch('eden_platform_main.code_optimizer', self.mock_code_optimizer):
             # Execute the handler
             result = self.agent._handle_optimization(task)
             
@@ -209,8 +212,8 @@ class TestAISuperAgent(unittest.TestCase):
         }
         
         # Ensure the mocked dependencies are accessible
-        with patch('eden_platform.file_manager', self.mock_file_manager), \
-             patch('eden_platform.ai_debugger', self.mock_ai_debugger):
+        with patch('eden_platform_main.file_manager', self.mock_file_manager), \
+             patch('eden_platform_main.ai_debugger', self.mock_ai_debugger):
             # Execute the handler
             result = self.agent._handle_code_analysis(task)
             

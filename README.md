@@ -32,11 +32,18 @@ pip install -r requirements.txt
 # Install frontend dependencies
 cd frontend
 npm install
+# Build frontend
+npm run build
 cd ..
 
 # Start the application
 python run.py
 ```
+
+## Development Setup
+
+1. Run `pip install -r requirements.txt` before running `pytest`.
+2. If tests fail due to missing packages, run `pip install -r requirements-dev.txt` to install extras like `requests` and `plotly`.
 
 ## Architecture
 

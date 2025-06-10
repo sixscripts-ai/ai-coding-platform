@@ -10,6 +10,7 @@ import Terminal from './components/Terminal';
 import ProjectSelector from './components/ProjectSelector';
 import AIAssistant from './components/AIAssistant';
 import WelcomePage from './components/WelcomePage';
+import SuperAgentDashboard from './components/SuperAgentDashboard';
 
 // Styles
 import './App.css';
@@ -94,10 +95,11 @@ function App() {
                 )
               } />
               <Route path="/projects" element={
-                <ProjectSelector 
-                  setActiveProject={setActiveProject} 
+                <ProjectSelector
+                  setActiveProject={setActiveProject}
                 />
               } />
+              <Route path="/dashboard" element={<SuperAgentDashboard />} />
             </Routes>
             {showTerminal && activeProject && (
               <Terminal 

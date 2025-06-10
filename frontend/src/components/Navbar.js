@@ -73,7 +73,8 @@ const Navbar = ({ activeProject, toggleTerminal, toggleAIAssistant }) => {
       
       <NavItems>
         <NavLink to="/projects">Projects</NavLink>
-        
+        <NavLink to="/dashboard">Dashboard</NavLink>
+
         <NavButton onClick={toggleTerminal}>
           Toggle Terminal
         </NavButton>
